@@ -2,6 +2,7 @@ import glob
 import re
 import shutil
 from datetime import datetime
+import time
 import tarfile
 # import dateutil.parser as dparser
 import dateparser
@@ -18,8 +19,8 @@ logger = set_logger('__main__', os.path.basename(__file__))
 pd.set_option('display.expand_frame_repr', False)
 pd.set_option('display.max_colwidth', 120)
 
-checked_archs = DataSaver(cfg.path_checked_archs, ['name', 'mtime'])
-backup_stats = DataSaver(cfg.path_backup_stats, ['name', 'from', 'after'])
+checked_archs = DataSaver(cfg.path_checked_archs, ['filename', 'filemtime'], parse_dates=['filemtime'])
+backup_stats = DataSaver(cfg.path_backup_stats, ['backups', 'from', 'after'])
 
 
 def to_mb(size_bytes):
@@ -43,16 +44,27 @@ def check_tar_extract_member_file(need_check, path, member):
 	return True
 
 
+def check_checked_archs(data):
+	for i, d in data.iterrows():
+		if not os.path.isfile(d.filename) or not d.filemtime == pd.to_datetime(os.path.getmtime(d.filename), unit='s'):
+			data = data.drop([i])
+	return data
+
+
 def test_arch(file):
-	if any(checked_archs.data.name == os.path.normpath(file)) and any(checked_archs.data.mtime == os.path.getmtime(file)):
+	file_mtime = pd.to_datetime(os.path.getmtime(file), unit='s')
+	if any(checked_archs.data.filename == os.path.normpath(file)) and any(checked_archs.data.filemtime == file_mtime):
 		return True
 	if test_7z(file):
-		checked_archs.add([os.path.normpath(file), pd.to_datetime(os.path.getmtime(file), infer_datetime_format=True)])
+		checked_archs.add([os.path.normpath(file), file_mtime])
 		return True
 	else:
 		logger.warning(f"Archive '{file}' test failed. Will be delete")
 		if os.path.isfile(file):
-			os.remove(file)
+			try:
+				os.remove(file)
+			except OSError as e:
+				exit_log(f"Not Deleting file: {e}")
 		return False
 
 
@@ -194,6 +206,9 @@ def main():
 	# Проверяем наличие необходимых директорий
 	for cd in [cfg.arch_path_recompress, cfg.temp_dir]:
 		check_dir(cd)
+
+	checked_archs.data = check_checked_archs(checked_archs.data)
+	checked_archs.save()
 
 	pool = Pool()
 	pool.starmap(subpath_proc, [

@@ -3,10 +3,10 @@ import os
 
 
 class DataSaver(object):
-	def __init__(self, file, cols=None):
+	def __init__(self, file, cols=None, parse_dates=None):
 		self._file = os.path.abspath(file)
 		if os.path.isfile(self._file):
-			self.data = pd.read_csv(self._file, sep=";", infer_datetime_format=True)
+			self.data = pd.read_csv(self._file, sep=";", infer_datetime_format=True, parse_dates=parse_dates)
 		else:
 			cols = [] if cols is None else cols
 			self.data = pd.DataFrame(columns=cols)
