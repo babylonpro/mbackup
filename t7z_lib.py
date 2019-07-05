@@ -12,7 +12,13 @@ def extract_7z_single(file, path):
 	run_7z_subproc(command, path)
 
 
-def extract_7z_data(file, path):
+def extract_and_compress_7z_single(file, fileto):
+	filename = os.path.splitext(os.path.basename(file))[0]
+	command = [cfg.path_7z, "e", "-so", file, "|", cfg.path_7z, "a", "-t7z", "-mx9", "-ssw", f"-si{filename}" "-up1q1r2w2", fileto]
+	run_7z_subproc(command, os.path.dirname(fileto))
+
+
+def extract_7z_tar_data(file, path):
 	command = [cfg.path_7z, "e", "-so", file, "|", cfg.path_7z, "x", "-aoa", "-si", "-ttar"]
 	run_7z_subproc(command, path)
 

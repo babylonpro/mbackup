@@ -1,11 +1,5 @@
-import glob
-import re
-import shutil
 from datetime import datetime
 import tarfile
-# import dateutil.parser as dparser
-import dateparser
-import pandas as pd
 import humanize as hu
 from multiprocessing.dummy import Pool
 
@@ -22,19 +16,6 @@ checked_archs = DataSaver(cfg.path_checked_archs, ['filename', 'filemtime'], par
 backup_stats = DataSaver(cfg.path_backup_stats, ['backups', 'from', 'after'])
 
 
-def to_mb(size_bytes):
-	return size_bytes / float(1 << 20)
-
-
-def to_gb(size_bytes):
-	return size_bytes / float(1 << 30)
-
-
-def format_size(size, nums=2):
-	strsize = str(round(size, 2)) if abs(size) >= 1 else f"{size:.{nums}g}"
-	return strsize.replace('.', ',')
-
-
 def logging_sizes(type_str, sub, size, count):
 	formsize = format_size(to_gb(size))
 	logger.info(f"{type_str} {{{sub}}} size: {hu.naturalsize(size, gnu=True)} ({formsize}), count: {count}")
@@ -42,6 +23,23 @@ def logging_sizes(type_str, sub, size, count):
 		backup_stats.add([sub, formsize, 0])
 	if type_str == "Result":
 		backup_stats.data.loc[(backup_stats.data.backups == sub), 'after'] = formsize
+
+
+def check_checked_archs(data):
+	for i, d in data.iterrows():
+		if not os.path.isfile(d.filename) or not d.filemtime == pd.to_datetime(os.path.getmtime(d.filename), unit='s'):
+			data = data.drop([i])
+	return data
+
+
+def extract_tar_incremental_data(file, path):
+	tar = tarfile.open(file)
+	need_check = True if os.path.isdir(path) else False
+	for member in tar.getmembers():
+		if member.isfile():
+			member.name = '/'.join(member.name.split('/')[2:])
+			if check_tar_extract_member_file(need_check, path, member):
+				tar.extract(member, path)
 
 
 def check_tar_extract_member_file(need_check, path, member):
@@ -53,16 +51,9 @@ def check_tar_extract_member_file(need_check, path, member):
 	return True
 
 
-def check_checked_archs(data):
-	for i, d in data.iterrows():
-		if not os.path.isfile(d.filename) or not d.filemtime == pd.to_datetime(os.path.getmtime(d.filename), unit='s'):
-			data = data.drop([i])
-	return data
-
-
 def test_arch(file):
 	file_mtime = pd.to_datetime(os.path.getmtime(file), unit='s')
-	if any(checked_archs.data.filename == os.path.normpath(file)) and any(checked_archs.data.filemtime == file_mtime):
+	if any((checked_archs.data.filename == os.path.normpath(file)) and (checked_archs.data.filemtime == file_mtime)):
 		return True
 	if test_7z(file):
 		checked_archs.add([os.path.normpath(file), file_mtime])
@@ -77,15 +68,15 @@ def test_arch(file):
 		return False
 
 
-def subpath_proc(subs, srcroot, ptype):
-	check_dir(srcroot)
-	logger.info(f"Proc subs #{len(subs)} in '{srcroot}'")
-	for subpath in subs:
+def subpath_proc(subs, ptype):
+	logger.info(f"Proc subs #{len(subs)} in '{ptype}'")
+	for subpath, srcroot in subs.items():
 		src = os.path.join(srcroot, subpath)
+		check_dir(src)
 		logger.info(f"Proc sub '{subpath}'")
 		temp_path = os.path.join(cfg.temp_dir, subpath)
 		dst_path = os.path.join(cfg.arch_path_recompress, subpath)
-		result_files = get_files_info('')
+		result_files = get_files_info(None)
 		if ptype is "data":
 			fulldata = filter_data_files(get_files_info(src, pattern="*.tar.gz"))
 			diffdata = filter_data_diff_files(get_files_info(src, pattern="*.tar.bz2"), fulldata.date.to_list())
@@ -122,22 +113,9 @@ def subpath_proc(subs, srcroot, ptype):
 
 				single_proc(data, single_temp_path, dst_path)
 
-				result_files = get_files_info(dst_path)
+				result_files = get_files_info(dst_path, pattern=None)
 
 		logging_sizes("Result", subpath, result_files['size'].sum(), len(result_files))
-
-
-def get_files_info(src, pattern="*"):
-	path = src if pattern is None else os.path.join(src, pattern)
-	filelist = glob.glob(path)
-	if len(filelist) > 0:
-		files = pd.DataFrame({'path': filelist})
-		# files['date'], files['date_diff'] = zip(*files.apply(lambda row: parse_file_date(row['path']), axis=1))
-		files[['date', 'date_diff']] = files.apply(lambda row: parse_file_date(row['path']), axis=1, result_type="expand")
-		files['size'] = files.apply(lambda row: os.path.getsize(row['path']), axis=1)
-	else:
-		files = pd.DataFrame(columns=['path', 'date', 'date_diff', 'size'])
-	return files
 
 
 def group_data_diff_files(files):
@@ -146,10 +124,14 @@ def group_data_diff_files(files):
 
 
 def filter_single_files(files):
+	if files.empty:
+		return files
 	return files[(files.date.dt.month < datetime.today().month) | (files.date.dt.year < datetime.today().year)]
 
 
 def filter_data_files(files):
+	if files.empty:
+		return files
 	return files[files.date != files.date.max()]
 
 
@@ -165,19 +147,6 @@ def get_date_period_files(files):
 		return f"{min_date:%Y}_{min_date:%m}-{max_date:%m}"
 	else:
 		return f"{min_date:%Y}_{min_date:%m}-{max_date:%Y}_{max_date:%m}"
-
-
-def parse_file_date(name):
-	match = re.findall(cfg.filename_date_pattern, name)
-	if match:
-		# dt = dparser.parse(match.group(), fuzzy_with_tokens=True)
-		dt = [dateparser.parse(m, date_formats=cfg.filename_date_formats) for m in match]
-		if len(dt) == 1:
-			dt.append(None)
-		return dt
-	else:
-		logger.debug(f"Error parse datetime in '{name}'")
-		return [None] * 2
 
 
 def data_proc(files, temp, dst):
@@ -196,36 +165,11 @@ def data_diff_proc(files, temp, dst):
 
 def single_proc(files, temp, dst):
 	tasks = [(f.path, temp) for i, f in files.iterrows()]
-	p = Pool(cfg.extracting_pool_size)
-	p.starmap(extract_7z_single, tasks)
-	compress_7z_data(dst, temp)
-	shutil.rmtree(temp)
-
-
-def extract_tar_incremental_data(file, path):
-	tar = tarfile.open(file)
-	need_check = True if os.path.isdir(path) else False
-	for member in tar.getmembers():
-		if member.isfile():
-			member.name = '/'.join(member.name.split('/')[2:])
-			if check_tar_extract_member_file(need_check, path, member):
-				tar.extract(member, path)
-
-
-def restrict_data_file(rootpath):
-	date_dirname_len = 11
-	pattern = f"{[0-9] * date_dirname_len}*"
-	dtdirs = glob.glob(os.path.join(rootpath, pattern, '**'), recursive=True)
-	for d in dtdirs:
-		if os.path.isfile(d):
-			relpath = os.path.relpath(os.path.relpath(d, rootpath)[date_dirname_len:], os.path.sep)
-			newpath = os.path.join(rootpath, relpath)
-			if not os.path.isdir(os.path.dirname(newpath)):
-				os.makedirs(os.path.dirname(newpath))
-			shutil.move(d, newpath)
-	for d in glob.glob(os.path.join(rootpath, pattern)):
-		shutil.rmtree(d)
-	print(len(dtdirs))
+	# p = Pool(2)
+	# p.starmap(extract_7z_single, tasks)
+	for i, f in files.iterrows():
+		extract_and_compress_7z_single(f.path, dst)
+	# shutil.rmtree(temp)
 
 
 def main():
@@ -238,8 +182,8 @@ def main():
 	# Распараллеливаем процесс на 2 потока
 	pool = Pool()
 	pool.starmap(subpath_proc, [
-		(cfg.sub_path_data, cfg.arch_path_data, "data"),
-		(cfg.sub_path_single, cfg.arch_path_single, "single")])
+		(cfg.sub_path_data, "data"),
+		(cfg.sub_path_single, "single")])
 
 	checked_archs.save()
 	backup_stats.save()
