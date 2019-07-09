@@ -14,7 +14,7 @@ def extract_7z_single(file, path):
 
 def extract_and_compress_7z_single(file, fileto):
 	filename = os.path.splitext(os.path.basename(file))[0]
-	command = [cfg.path_7z, "e", "-so", file, "|", cfg.path_7z, "a", "-t7z", "-mx9", "-ssw", f"-si{filename}" "-up1q1r2w2", fileto]
+	command = [cfg.path_7z, "e", "-so", file, "|", cfg.path_7z, "a",  "-up1q1r2x1y1z1w1", "-t7z", "-mx9", "-ssw", f"-si{filename}", fileto]
 	run_7z_subproc(command, os.path.dirname(fileto))
 
 

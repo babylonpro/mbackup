@@ -6,7 +6,8 @@ from multiprocessing.dummy import Pool
 from logger import set_logger
 from mbackup_lib import *
 from t7z_lib import *
-from DataSaverClass import DataSaver
+from DataSaver import DataSaver
+from TaskManager import TaskManager
 
 logger = set_logger('__main__', os.path.basename(__file__))
 pd.set_option('display.expand_frame_repr', False)
@@ -53,7 +54,7 @@ def check_tar_extract_member_file(need_check, path, member):
 
 def test_arch(file):
 	file_mtime = pd.to_datetime(os.path.getmtime(file), unit='s')
-	if any((checked_archs.data.filename == os.path.normpath(file)) and (checked_archs.data.filemtime == file_mtime)):
+	if any((checked_archs.data.filename == os.path.normpath(file)) & (checked_archs.data.filemtime == file_mtime)):
 		return True
 	if test_7z(file):
 		checked_archs.add([os.path.normpath(file), file_mtime])
@@ -180,11 +181,12 @@ def main():
 	checked_archs.data = check_checked_archs(checked_archs.data)
 	checked_archs.save()
 	# Распараллеливаем процесс на 2 потока
-	pool = Pool()
-	pool.starmap(subpath_proc, [
-		(cfg.sub_path_data, "data"),
-		(cfg.sub_path_single, "single")])
-
+	# pool = Pool()
+	# pool.starmap(subpath_proc, [
+	# 	(cfg.sub_path_data, "data"),
+	# 	(cfg.sub_path_single, "single")])
+	tm = TaskManager()
+	tm.initFiles()
 	checked_archs.save()
 	backup_stats.save()
 

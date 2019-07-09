@@ -18,8 +18,10 @@ sub_path_single = dict(zip(["pgtu/db", "mooped/db", "leot/svn_dump", "leot/gitea
 filename_date_formats = ["%Y-%m-%d.%H-%M-%S", "%Y-%m-%d-%H-%M-%S", "%f"]
 filename_date_pattern = r"\d{4}-\d{2}-\d{2}[\.|-]\d{2}-\d{2}-\d{2}|\d{10}"
 
+proc_task_poll_size = 2
 extracting_pool_size = 5
 
+path_mbackup_tasks = "mbackup_tasks.yaml"
 path_checked_archs = "mbackup_proc_checked_archs.csv"
 path_backup_stats = f"backup_stats{datetime.strftime(datetime.today(), filename_date_formats[0])}.csv"
 

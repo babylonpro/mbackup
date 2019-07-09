@@ -39,7 +39,7 @@ def to_gb(size_bytes):
 
 
 def format_size(size, nums=2):
-	strsize = str(round(size, 2)) if abs(size) >= 1 else f"{size:.{nums}g}"
+	strsize = str(round(size, nums)) if abs(size) >= 1 else f"{size:.{nums}g}"
 	return strsize.replace('.', ',')
 
 
