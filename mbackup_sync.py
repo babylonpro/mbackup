@@ -7,8 +7,8 @@ logger = set_logger('__main__', os.path.basename(__file__))
 def subpath_sync(subs):
 	logger.info(f"Sync subs #{len(subs)}")
 	for task in subs:
-		src = os.path.join(cfg.mbackup_root_path, task.sub)
-		dst = os.path.join(task.storage, task.sub)
+		src = os.path.normpath(os.path.join(cfg.mbackup_root_path, task.sub))
+		dst = task.store_path
 		backup_directory_simple(src, dst)
 
 

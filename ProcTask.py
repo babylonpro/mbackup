@@ -1,4 +1,7 @@
 from mbackup_lib import *
+import logging
+
+logger = logging.getLogger(f"__main__.{__name__}")
 
 
 class ProcTask(object):
@@ -11,18 +14,22 @@ class ProcTask(object):
 	result_files = None
 
 	def __init__(self, **kwargs):
-		self.__dict__.update((k, v) for k, v in kwargs.items() if k in self.__class__.__dict__.keys())
+		attrs = [x for x in dir(self) if not callable(x) and not(x.startswith('__') and x.endswith('__'))]
+		self.__dict__.update((k, v) for k, v in kwargs.items() if k in attrs)
 
-		self.src_path = os.path.join(self.storage, self.sub)
-		self.temp_path = os.path.join(cfg.temp_dir, self.sub)
-		self.dst_path = os.path.join(cfg.arch_path_recompress, self.sub)
+		self.store_path = os.path.normpath(os.path.join(self.storage, self.sub))
+		self.temp_path = os.path.normpath(os.path.join(cfg.temp_dir, self.sub))
+		self.reco_path = os.path.normpath(os.path.join(cfg.arch_path_recompress, self.sub))
 
-	def initFiles(self):
-		check_dir(self.src_path)
+	def init_files(self, manager):
+		logger.debug(f"Init files from '{self.store_path}'")
+		check_dir(self.store_path)
 		self.result_files = get_files_info(None)
-		self.files = self.filterFiles(get_files_info(self.src_path, self.pattern))
-		# logger.info(f"Proc sub '{subpath}'")
+		self.files = self.filter_files(get_files_info(self.store_path, self.pattern))
 
 	@staticmethod
-	def filterFiles(files):
+	def filter_files(files):
 		pass
+
+	def get_files_date(self):
+		return self.files.date.to_list() if self.files is not None else []

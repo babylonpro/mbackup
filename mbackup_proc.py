@@ -186,7 +186,7 @@ def main():
 	# 	(cfg.sub_path_data, "data"),
 	# 	(cfg.sub_path_single, "single")])
 	tm = TaskManager()
-	tm.initFiles()
+	tm.init_files()
 	checked_archs.save()
 	backup_stats.save()
 

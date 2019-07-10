@@ -10,11 +10,6 @@ mbackup_root_path = "\\\\10.0.0.47/backup/moodle"
 arch_path_storages = ["E:/!_backupshare", "H:/!_backupshare"]
 arch_path_recompress = "G:/!recompress"
 
-sub_path_data = dict(zip(["pgtu/data", "mooped/data", "bbb/records", "leot/gitea_data"],
-                         [arch_path_storages[1]] + [arch_path_storages[0]] * 3))
-sub_path_single = dict(zip(["pgtu/db", "mooped/db", "leot/svn_dump", "leot/gitea", "leot/youtrack"],
-                           [arch_path_storages[0]] * 5))
-
 filename_date_formats = ["%Y-%m-%d.%H-%M-%S", "%Y-%m-%d-%H-%M-%S", "%f"]
 filename_date_pattern = r"\d{4}-\d{2}-\d{2}[\.|-]\d{2}-\d{2}-\d{2}|\d{10}"
 
