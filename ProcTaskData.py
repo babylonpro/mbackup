@@ -10,11 +10,11 @@ class ProcTaskData(ProcTask):
 			return files
 		return files[files.date != files.date.max()]
 
-	def init_files(self, manager):
-		super().init_files(manager)
+	def init_files(self):
+		super().init_files()
 		dates = self.get_files_date()
 		taskdata = self.__dict__
-		taskdata['ztype'] = 'diffdata'
+		taskdata['ztype'] = 'datadiff'
 		for date in dates:
 			taskdata['fulldate'] = date
-			manager.add_task(**taskdata)
+			self.manager.add_task(**taskdata)

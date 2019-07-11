@@ -6,11 +6,9 @@ class ProcTaskDataDiff(ProcTask):
 
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
-		self.ztype = 'diffdata'
+		self.fulldate = kwargs['fulldate']
 
-	@staticmethod
-	def filter_files(files, fulldates=None):
+	def filter_files(self, files):
 		if files.empty:
 			return files
-		fulldates = [] if fulldates is None else fulldates
-		return files[files.date_diff.isin(fulldates)]
+		return files[files.date_diff == self.fulldate]
