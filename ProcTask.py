@@ -32,9 +32,11 @@ class ProcTask(object):
 
 	def init_files_info(self):
 		name = os.path.basename(self.files['path'].get(self.files.first_valid_index(), ''))
-		matchmane = re.search("([\D]+)\.", name)
+		matchmane = re.search(r"(^[a-z_-]+)(\.|\d)", name, re.IGNORECASE)
 		self.files_info['basename'] = matchmane.group(1) if matchmane else self.sub.split('/')[-1]
 		self.files_info['period'] = self.get_date_period_files(self.files)
+		self.files_info['size'] = self.files['size'].sum()
+		self.files_info['arch_name'] = os.path.basename(self.files['path'].get(self.files.first_valid_index(), ''))
 
 	@staticmethod
 	def filter_files(files):
@@ -56,3 +58,6 @@ class ProcTask(object):
 
 	def check_files(self):
 		return not self.files.empty
+
+	def get_ext(self):
+		return self.pattern.replace('*', '')

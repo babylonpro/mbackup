@@ -9,3 +9,8 @@ class ProcTaskSingle(ProcTask):
 		if files.empty:
 			return files
 		return files[(files.date.dt.month < datetime.today().month) | (files.date.dt.year < datetime.today().year)]
+
+	def init_files_info(self):
+		super().init_files_info()
+		self.files_info['arch_name'] \
+			= f"{self.files_info['basename']}.{self.files_info['period']}.7z"

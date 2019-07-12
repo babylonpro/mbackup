@@ -44,8 +44,14 @@ class TaskManager(object):
 				self.tasks.append(task)
 
 	def init_files(self):
+		i = 0
+		while i < len(self.tasks):
+			self.tasks[i].init_files()
+			i += 1
+		self.check_files()
+
+	def check_files(self):
 		for t in self.tasks:
-			t.init_files()
 			if not t.check_files():
 				self.tasks.remove(t)
 			else:
